@@ -1,5 +1,5 @@
 {
-  "experiment_name": "default_experiment",
+  "experiment_name": "experiment_1",
   "dataset": {
     "training_ids_file_path": "./train_ids.csv",
     "validation_ids_file_path": "./val_ids.csv",
@@ -19,8 +19,7 @@
   "model": {
     "hidden_size": 512,
     "embedding_size": 300,
-    "model_type": "RNN",
-    "keep_image": false
+    "model_type": "model_1"
   },
   "generation": {
     "max_length": 20,
