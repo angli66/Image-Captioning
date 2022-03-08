@@ -8,6 +8,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torch.nn as nn
+import torch.optim as optim
 from datetime import datetime
 
 from caption_utils import *
@@ -45,9 +47,9 @@ class Experiment(object):
         # Init Model
         self.__model = get_model(config_data, self.__vocab)
 
-        # TODO: Set these Criterion and Optimizers Correctly
-        self.__criterion = None
-        self.__optimizer = None
+        # Set Criterion and Optimizers
+        self.__criterion = nn.CrossEntropyLoss()
+        self.__optimizer = optim.Adam(lr=config_data['experiment']['learning_rate'])
 
         self.__init_model()
 
