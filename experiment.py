@@ -11,9 +11,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import nltk
 from datetime import datetime
 
-from caption_utils import *
+import caption_utils
 from constants import ROOT_STATS_DIR
 from dataset_factory import get_datasets
 from file_utils import *
@@ -77,6 +78,7 @@ class Experiment(object):
         if torch.cuda.is_available():
             self.__model = self.__model.cuda().float()
             self.__criterion = self.__criterion.cuda()
+        self.__best_model = self.__model
 
     # Main method to run your experiment. Should be self-explanatory.
     def run(self):
@@ -100,7 +102,7 @@ class Experiment(object):
         training_loss = 0
 
         # Iterate over the data, implement the training function
-        for i, (images, captions, _) in enumerate(self.__train_loader):
+        for images, captions, _ in self.__train_loader:
             images = images.cuda()
             captions = captions.cuda()
 
@@ -112,7 +114,7 @@ class Experiment(object):
             self.__optimizer.step()
             training_loss += loss.item()
         
-        training_loss = training_loss / len(self.__train_loader)
+        training_loss /= len(self.__train_loader)
         return training_loss
 
     # Perform one Pass on the validation set and return loss value. You may also update your best model here.
@@ -121,7 +123,7 @@ class Experiment(object):
         val_loss = 0
 
         with torch.no_grad():
-            for i, (images, captions, _) in enumerate(self.__val_loader):
+            for images, captions, _ in self.__val_loader:
                 images = images.cuda()
                 captions = captions.cuda()
 
@@ -130,7 +132,7 @@ class Experiment(object):
                 loss = self.__criterion(outputs, targets)
                 val_loss += loss.item()
 
-        val_loss = val_loss / len(self.__val_loader)
+        val_loss /= len(self.__val_loader)
         if len(self.__val_losses) == 0 or val_loss < min(self.__val_losses):
             self.__best_model = self.__model
 
@@ -146,9 +148,48 @@ class Experiment(object):
         bleu4 = 0
 
         with torch.no_grad():
-            for iter, (images, captions, img_ids) in enumerate(self.__test_loader):
-                raise NotImplementedError()
+            for images, captions, img_ids in self.__test_loader:
+                images = images.cuda()
+                captions = captions.cuda()
 
+                outputs = self.__best_model(images, captions)
+
+                # Calculate test loss
+                targets = (F.one_hot(captions, num_classes=len(self.__vocab))).float()
+                loss = self.__criterion(outputs, targets)
+                test_loss += loss.item()
+
+                # Generate the output string
+                sampled_ids = self.__best_model.sample(images,
+                                                        self.__generation_config['max_length'],
+                                                        self.__generation_config['temperature'],
+                                                        self.__generation_config['deterministic'])
+                for i, sampled_id in enumerate(sampled_ids):
+                    # Get predicted caption
+                    predicted_caption = ""
+                    for j, word_idx in enumerate(sampled_id):
+                        if j == 0:
+                            continue
+                        word = self.__vocab.idx2word[word_idx.item()]
+                        if word == '<end>':
+                            break
+                        predicted_caption += word + ' '
+                    predicted_caption = nltk.tokenize.word_tokenize(predicted_caption)
+
+                    # Get reference captions
+                    reference_captions = []
+                    annotations = self.__coco_test.imgToAnns[img_ids[i]]
+                    for annotation in annotations:
+                        reference_caption = annotation['caption']
+                        reference_caption = nltk.tokenize.word_tokenize(reference_caption)
+                        reference_captions.append(reference_caption)
+                    
+                    bleu1 += caption_utils.bleu1(reference_captions, predicted_caption)
+                    bleu4 += caption_utils.bleu4(reference_captions, predicted_caption)
+        
+        test_loss /= len(self.__test_loader)
+        bleu1 /= len(self.__test_loader.dataset)
+        bleu4 /= len(self.__test_loader.dataset)
         result_str = "Test Performance: Loss: {}, Bleu1: {}, Bleu4: {}".format(test_loss,
                                                                                 bleu1,
                                                                                 bleu4)
