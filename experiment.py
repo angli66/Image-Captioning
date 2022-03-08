@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 from datetime import datetime
 
@@ -49,7 +50,7 @@ class Experiment(object):
 
         # Set Criterion and Optimizers
         self.__criterion = nn.CrossEntropyLoss()
-        self.__optimizer = optim.Adam(lr=config_data['experiment']['learning_rate'])
+        self.__optimizer = optim.Adam(self.__model.parameters(), lr=config_data['experiment']['learning_rate'])
 
         self.__init_model()
 
@@ -81,6 +82,7 @@ class Experiment(object):
     def run(self):
         start_epoch = self.__current_epoch
         for epoch in range(start_epoch, self.__epochs):  # loop over the dataset multiple times
+            print("Training...")
             start_time = datetime.now()
             self.__current_epoch = epoch
             train_loss = self.__train()
@@ -88,31 +90,54 @@ class Experiment(object):
             self.__record_stats(train_loss, val_loss)
             self.__log_epoch_stats(start_time)
             self.__save_model()
+            self.__save_best_model()
 
-    # TODO: Perform one training iteration on the whole dataset and return loss value
+        self.plot_stats()
+
+    # Perform one training iteration on the whole dataset and return loss value
     def __train(self):
         self.__model.train()
         training_loss = 0
 
         # Iterate over the data, implement the training function
         for i, (images, captions, _) in enumerate(self.__train_loader):
-            raise NotImplementedError()
+            images = images.cuda()
+            captions = captions.cuda()
 
+            self.__optimizer.zero_grad()
+            outputs = self.__model(images, captions)
+            targets = (F.one_hot(captions, num_classes=len(self.__vocab))).float()
+            loss = self.__criterion(outputs, targets)
+            loss.backward()
+            self.__optimizer.step()
+            training_loss += loss.item()
+        
+        training_loss = training_loss / len(self.__train_loader)
         return training_loss
 
-    # TODO: Perform one Pass on the validation set and return loss value. You may also update your best model here.
+    # Perform one Pass on the validation set and return loss value. You may also update your best model here.
     def __val(self):
         self.__model.eval()
         val_loss = 0
 
         with torch.no_grad():
             for i, (images, captions, _) in enumerate(self.__val_loader):
-                raise NotImplementedError()
+                images = images.cuda()
+                captions = captions.cuda()
+
+                outputs = self.__model(images, captions)
+                targets = (F.one_hot(captions, num_classes=len(self.__vocab))).float()
+                loss = self.__criterion(outputs, targets)
+                val_loss += loss.item()
+
+        val_loss = val_loss / len(self.__val_loader)
+        if len(self.__val_losses) == 0 or val_loss < min(self.__val_losses):
+            self.__best_model = self.__model
 
         return val_loss
 
-    # TODO: Implement your test function here. Generate sample captions and evaluate loss and
-    #  bleu scores using the best model. Use utility functions provided to you in caption_utils.
+    #  Generate sample captions and evaluate loss and bleu scores using the best model.
+    #  Use utility functions provided to you in caption_utils.
     #  Note than you'll need image_ids and COCO object in this case to fetch all captions to generate bleu scores.
     def test(self):
         self.__model.eval()
@@ -124,9 +149,9 @@ class Experiment(object):
             for iter, (images, captions, img_ids) in enumerate(self.__test_loader):
                 raise NotImplementedError()
 
-        result_str = "Test Performance: Loss: {}, Perplexity: {}, Bleu1: {}, Bleu4: {}".format(test_loss,
-                                                                                               bleu1,
-                                                                                               bleu4)
+        result_str = "Test Performance: Loss: {}, Bleu1: {}, Bleu4: {}".format(test_loss,
+                                                                                bleu1,
+                                                                                bleu4)
         self.__log(result_str)
 
         return test_loss, bleu1, bleu4
@@ -137,11 +162,14 @@ class Experiment(object):
         state_dict = {'model': model_dict, 'optimizer': self.__optimizer.state_dict()}
         torch.save(state_dict, root_model_path)
 
+    def __save_best_model(self):
+        root_model_path = os.path.join(self.__experiment_dir, 'best_model.pt')
+        model_dict = self.__best_model.state_dict()
+        torch.save(model_dict, root_model_path)
+
     def __record_stats(self, train_loss, val_loss):
         self.__training_losses.append(train_loss)
         self.__val_losses.append(val_loss)
-
-        self.plot_stats()
 
         write_to_file_in_dir(self.__experiment_dir, 'training_losses.txt', self.__training_losses)
         write_to_file_in_dir(self.__experiment_dir, 'val_losses.txt', self.__val_losses)
