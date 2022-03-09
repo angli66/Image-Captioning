@@ -168,11 +168,8 @@ class Model2(nn.Module):
         
         return outputs
 
-    def sample(self, images, max_length, temperature, deteministic=False):
+    def sample(self, images, max_length, temperature, deterministic=False):
         '''Sample captions (in form of word id) for given images.'''
-        if deteministic == True:
-            raise NotImplementedError("Deterministic generation not implemented")
-        
         batch_size = images.shape[0]
         states = self.init_hidden(batch_size)
         sampled_ids = torch.zeros((batch_size, max_length))
@@ -184,11 +181,15 @@ class Model2(nn.Module):
         inputs = torch.cat((features, pad_embedding), dim=2)
         for i in range(max_length):
             outputs, states = self.lstm(inputs, states)
-
             outputs = self.fc(outputs)
-            predictions = F.softmax(outputs / temperature, dim=-1)
-            predictions = predictions.squeeze()
-            predictions = torch.multinomial(predictions, 1).reshape(-1)
+
+            if deterministic == False:
+                predictions = F.softmax(outputs / temperature, dim=-1)
+                predictions = predictions.squeeze()
+                predictions = torch.multinomial(predictions, 1).reshape(-1)
+            else:
+                predictions = torch.argmax(outputs, -1).squeeze()
+
             sampled_ids[:, i] = predictions
             inputs = self.embedding(predictions)
             inputs = inputs.unsqueeze(1)
