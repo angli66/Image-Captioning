@@ -109,7 +109,7 @@ class Experiment(object):
             self.__optimizer.zero_grad()
             outputs = self.__model(images, captions)
             targets = (F.one_hot(captions, num_classes=len(self.__vocab))).float()
-            loss = self.__criterion(outputs, targets)
+            loss = self.__criterion(outputs.contiguous().view(-1, len(self.__vocab)), captions.view(-1))
             loss.backward()
             self.__optimizer.step()
             training_loss += loss.item()
@@ -129,7 +129,8 @@ class Experiment(object):
 
                 outputs = self.__model(images, captions)
                 targets = (F.one_hot(captions, num_classes=len(self.__vocab))).float()
-                loss = self.__criterion(outputs, targets)
+                # loss = self.__criterion(outputs, targets)
+                loss = self.__criterion(outputs.contiguous().view(-1, len(self.__vocab)), captions.view(-1))
                 val_loss += loss.item()
 
         val_loss /= len(self.__val_loader)
@@ -156,7 +157,8 @@ class Experiment(object):
 
                 # Calculate test loss
                 targets = (F.one_hot(captions, num_classes=len(self.__vocab))).float()
-                loss = self.__criterion(outputs, targets)
+                # loss = self.__criterion(outputs, targets)
+                loss = self.__criterion(outputs.contiguous().view(-1, len(self.__vocab)), captions.view(-1))
                 test_loss += loss.item()
 
                 # Generate the output string
