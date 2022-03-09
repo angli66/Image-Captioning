@@ -15,7 +15,6 @@ def get_image_encoder():
     encoder = models.resnet50(pretrained=True)
     for param in encoder.parameters():
         param.requires_grad = False
-    # encoder.fc = nn.Linear(2048, embedding_size)
     encoder.fc = nn.Identity()
     return encoder
 
@@ -100,11 +99,6 @@ class Model1(nn.Module):
         features = self.linear(features)
         inputs = features.unsqueeze(1)
         for i in range(max_length):
-            # if i == 0:
-            #     outputs, states = self.lstm(inputs)
-            # else:
-            #     outputs, states = self.lstm(inputs, states)
-
             outputs, states = self.lstm(inputs, states)
 
             outputs = self.fc(outputs)
