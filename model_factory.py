@@ -29,7 +29,8 @@ class Model1(nn.Module):
         # Layers
         self.encoder = get_image_encoder(embedding_size)
         self.embedding = nn.Embedding(self.vocab_size, self.embedding_size)
-        self.lstm = nn.LSTM(self.embedding_size, self.hidden_size, self.num_layers, batch_first=True)
+        # self.lstm = nn.LSTM(self.embedding_size, self.hidden_size, self.num_layers, batch_first=True)
+        self.rnn = nn.RNN(self.embedding_size, self.hidden_size, self.num_layers, batch_first=True)
         self.fc = nn.Linear(self.hidden_size, self.vocab_size)
 
     def forward(self, images, captions):
@@ -58,7 +59,8 @@ class Model1(nn.Module):
 
         # Concatenate image features and caption embeddings excluding <end>
         embeddings = torch.cat((features, embeddings[:, :-1, :]), dim=1)
-        outputs, _ = self.lstm(embeddings)
+        # outputs, _ = self.lstm(embeddings)
+        outputs, _ = self.rnn(embeddings)
         outputs = self.fc(outputs)
         
         return outputs
