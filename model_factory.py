@@ -4,8 +4,10 @@
 # Updated by Rohin
 # Winter 2022
 ################################################################################
+
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torchvision.models as models
 
 def get_image_encoder(embedding_size):
@@ -64,6 +66,31 @@ class Model1(nn.Module):
         outputs = self.fc(outputs)
         
         return outputs
+
+    def sample(self, images, max_length, temperature, deteministic=False):
+        '''Sample captions (in form of word id) for given images.'''
+        if deteministic == True:
+            raise NotImplementedError("Deterministic generation not implemented")
+        
+        batch_size = images.shape[0]
+        sampled_ids = torch.zeros((batch_size, max_length))
+        features = self.encoder(images)
+        inputs = features.unsqueeze(1)
+        for i in range(max_length):
+            if i == 0:
+                outputs, states = self.lstm(inputs)
+            else:
+                outputs, states = self.lstm(inputs, states)
+
+            outputs = self.fc(outputs)
+            predictions = F.softmax(outputs / temperature, dim=-1)
+            predictions = predictions.squeeze()
+            predictions = torch.multinomial(predictions, 1).reshape(-1)
+            sampled_ids[:, i] = predictions
+            inputs = self.embedding(predictions)
+            inputs = inputs.unsqueeze(1)
+        
+        return sampled_ids
 
 def get_model(config_data, vocab):
     '''Build and return the model here based on the configuration.'''
