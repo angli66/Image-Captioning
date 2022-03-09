@@ -1,9 +1,14 @@
 [![Open in Visual Studio Code](https://classroom.github.com/assets/open-in-vscode-f059dc9a6f8d3a56e377f745f24479a46679e63a5d9fe6f495e02850cd0d8118.svg)](https://classroom.github.com/online_ide?assignment_repo_id=7169743&assignment_repo_type=AssignmentRepo)
-Change this README to describe how your code works and how to run it before you submit it on gradescope.
 
 # Image Captioning
 
-* TODO: Details specific to the student's implementation to be added by the student 
+This repository contains the code for a neural network that is trained to automatically generate captions for images. To run the code, first specify the hyperparameters of the system. Check `baseline.json` for description of the hyperparameters. Run with
+
+    python3 main.py
+
+will load `baseline.json` by default. After the training finished, it will generate a folder named `experiment_data` in the root folder that contains training information along with the test performance report (measures by BLEU score comparing to groundtruth captions). Then, run `visualize_results.ipynb` to visualize the generated captions by the model on the images from test set. To run with different config, create a new json file e.g. `new_experiment.json`, then run with
+
+    python3 main.py new_experiment
 
 ## Usage
 
