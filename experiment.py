@@ -140,7 +140,7 @@ class Experiment(object):
     #  Use utility functions provided to you in caption_utils.
     #  Note than you'll need image_ids and COCO object in this case to fetch all captions to generate bleu scores.
     def test(self):
-        self.__model.eval()
+        self.__best_model.eval()
         test_loss = 0
         bleu1 = 0
         bleu4 = 0
