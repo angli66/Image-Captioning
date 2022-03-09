@@ -10,12 +10,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 
-def get_image_encoder(embedding_size):
+def get_image_encoder():
     '''Return a pre-trained ResNet-50 image encoder for partial fine-tuning'''
     encoder = models.resnet50(pretrained=True)
     for param in encoder.parameters():
         param.requires_grad = False
-    encoder.fc = nn.Linear(2048, embedding_size)
+    # encoder.fc = nn.Linear(2048, embedding_size)
+    encoder.fc = nn.Identity()
     return encoder
 
 class Model1(nn.Module):
@@ -29,11 +30,23 @@ class Model1(nn.Module):
         self.num_layers = num_layers
 
         # Layers
-        self.encoder = get_image_encoder(embedding_size)
+        self.encoder = get_image_encoder()
+
+        self.linear = nn.Linear(2048, embedding_size)
+
         self.embedding = nn.Embedding(self.vocab_size, self.embedding_size)
-        # self.lstm = nn.LSTM(self.embedding_size, self.hidden_size, self.num_layers, batch_first=True)
-        self.rnn = nn.RNN(self.embedding_size, self.hidden_size, self.num_layers, batch_first=True)
+        self.lstm = nn.LSTM(self.embedding_size, self.hidden_size, self.num_layers, batch_first=True)
+        # self.rnn = nn.RNN(self.embedding_size, self.hidden_size, self.num_layers, batch_first=True)
         self.fc = nn.Linear(self.hidden_size, self.vocab_size)
+
+    def init_hidden(self, batch_size):
+        """ At the start of training, we need to initialize a hidden state;
+        there will be none because the hidden state is formed based on previously seen data.
+        So, this function defines a hidden state with all zeroes
+        The axes semantics are (num_layers, batch_size, hidden_dim)
+        """
+        return (torch.zeros((2, batch_size, self.hidden_size)).cuda(), \
+                torch.zeros((2, batch_size, self.hidden_size)).cuda())
 
     def forward(self, images, captions):
         '''
@@ -53,16 +66,24 @@ class Model1(nn.Module):
         '''
         # Get embedded features of images
         features = self.encoder(images)
+
+        features = self.linear(features)
+
         features = features.unsqueeze(1)
+        
+        captions = captions[:, :-1]
+
+        self.batch_size = features.shape[0]
+        self.hidden = self.init_hidden(self.batch_size)
 
         # Embed the captions
         # Raise batch_size x sequence_length to batch_size x sequence_length x embedding_size
         embeddings = self.embedding(captions)
 
         # Concatenate image features and caption embeddings excluding <end>
-        embeddings = torch.cat((features, embeddings[:, :-1, :]), dim=1)
-        # outputs, _ = self.lstm(embeddings)
-        outputs, _ = self.rnn(embeddings)
+        embeddings = torch.cat((features, embeddings), dim=1)
+        outputs, self.hidden = self.lstm(embeddings, self.hidden)
+        # outputs, self.hidden = self.rnn(embeddings, self.hidden)
         outputs = self.fc(outputs)
         
         return outputs
@@ -73,14 +94,18 @@ class Model1(nn.Module):
             raise NotImplementedError("Deterministic generation not implemented")
         
         batch_size = images.shape[0]
+        states = self.init_hidden(batch_size)
         sampled_ids = torch.zeros((batch_size, max_length))
         features = self.encoder(images)
+        features = self.linear(features)
         inputs = features.unsqueeze(1)
         for i in range(max_length):
-            if i == 0:
-                outputs, states = self.lstm(inputs)
-            else:
-                outputs, states = self.lstm(inputs, states)
+            # if i == 0:
+            #     outputs, states = self.lstm(inputs)
+            # else:
+            #     outputs, states = self.lstm(inputs, states)
+
+            outputs, states = self.lstm(inputs, states)
 
             outputs = self.fc(outputs)
             predictions = F.softmax(outputs / temperature, dim=-1)

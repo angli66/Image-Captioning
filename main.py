@@ -11,7 +11,7 @@ import sys
 # Main Driver for your code. Either run `python main.py` which will run the experiment with default config
 # or specify the configuration by running `python main.py custom`
 if __name__ == "__main__":
-    exp_name = 'rnn_1'
+    exp_name = 'lstm_3'
 
     if len(sys.argv) > 1:
         exp_name = sys.argv[1]
