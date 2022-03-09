@@ -154,9 +154,8 @@ class Model2(nn.Module):
         features = features.unsqueeze(1)
 
         # Add <pad> to the beginning of the captions, remove the <end>
-        padding = torch.tensor([self.vocab('<pad>')]).repeat(self.batch_size, 1)
+        padding = torch.tensor([self.vocab('<pad>')]).repeat(images.shape[0], 1).cuda()
         captions = torch.cat((padding, captions[:, :-1]), dim=1)
-        # captions = captions[:, :-1]
 
         # Initialize hidden and cell state
         self.batch_size = features.shape[0]
@@ -167,6 +166,7 @@ class Model2(nn.Module):
         embeddings = self.embedding(captions)
 
         # Concatenate image features and caption embeddings excluding <end>
+        features = features.repeat(1, embeddings.shape[1], 1)
         embeddings = torch.cat((features, embeddings), dim=2)
         outputs, self.hidden = self.lstm(embeddings, self.hidden)
         # outputs, self.hidden = self.rnn(embeddings, self.hidden)
@@ -184,7 +184,7 @@ class Model2(nn.Module):
         sampled_ids = torch.zeros((batch_size, max_length))
         features = self.encoder(images)
         features = self.linear(features).unsqueeze(1)
-        padding = torch.tensor([self.vocab('<pad>')]).repeat(self.batch_size, 1)
+        padding = torch.tensor([self.vocab('<pad>')]).repeat(batch_size, 1).cuda()
         pad_embedding = self.embedding(padding)
 
         inputs = torch.cat((features, pad_embedding), dim=2)
