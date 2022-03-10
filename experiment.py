@@ -108,7 +108,6 @@ class Experiment(object):
 
             self.__optimizer.zero_grad()
             outputs = self.__model(images, captions)
-            targets = (F.one_hot(captions, num_classes=len(self.__vocab))).float()
             loss = self.__criterion(outputs.contiguous().view(-1, len(self.__vocab)), captions.view(-1))
             loss.backward()
             self.__optimizer.step()
@@ -128,8 +127,6 @@ class Experiment(object):
                 captions = captions.cuda()
 
                 outputs = self.__model(images, captions)
-                targets = (F.one_hot(captions, num_classes=len(self.__vocab))).float()
-                # loss = self.__criterion(outputs, targets)
                 loss = self.__criterion(outputs.contiguous().view(-1, len(self.__vocab)), captions.view(-1))
                 val_loss += loss.item()
 
@@ -143,7 +140,7 @@ class Experiment(object):
     #  Use utility functions provided to you in caption_utils.
     #  Note than you'll need image_ids and COCO object in this case to fetch all captions to generate bleu scores.
     def test(self):
-        self.__model.eval()
+        self.__best_model.eval()
         test_loss = 0
         bleu1 = 0
         bleu4 = 0
@@ -156,8 +153,6 @@ class Experiment(object):
                 outputs = self.__best_model(images, captions)
 
                 # Calculate test loss
-                targets = (F.one_hot(captions, num_classes=len(self.__vocab))).float()
-                # loss = self.__criterion(outputs, targets)
                 loss = self.__criterion(outputs.contiguous().view(-1, len(self.__vocab)), captions.view(-1))
                 test_loss += loss.item()
 
