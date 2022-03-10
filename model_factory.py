@@ -83,7 +83,7 @@ class Model1(nn.Module):
         # Concatenate image features and caption embeddings excluding <end>
         embeddings = torch.cat((features, embeddings), dim=1)
         outputs, self.hidden = self.lstm(embeddings, self.hidden)
-        # outputs, self.hidden = self.rnn(embeddings, self.hidden)
+        # outputs, _ = self.rnn(embeddings)
         outputs = self.fc(outputs)
         
         return outputs
@@ -100,12 +100,13 @@ class Model1(nn.Module):
         features = self.linear(features)
         inputs = features.unsqueeze(1)
         for i in range(max_length):
-            # if i == 0:
-            #     outputs, states = self.lstm(inputs)
-            # else:
-            #     outputs, states = self.lstm(inputs, states)
+        #     if i == 0:
+        #         outputs, states = self.rnn(inputs)
+        #     else:
+        #         outputs, states = self.rnn(inputs, states)
 
             outputs, states = self.lstm(inputs, states)
+            # outputs, states = self.rnn(inputs, states)
 
             outputs = self.fc(outputs)
             predictions = F.softmax(outputs / temperature, dim=-1)

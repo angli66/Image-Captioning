@@ -1,5 +1,5 @@
 {
-  "experiment_name": "lstm_3",
+  "experiment_name": "rnn_3",
   "dataset": {
     "training_ids_file_path": "./train_ids.csv",
     "validation_ids_file_path": "./val_ids.csv",
@@ -13,7 +13,7 @@
     "num_workers": 4
   },
   "experiment": {
-    "num_epochs": 0,
+    "num_epochs": 10,
     "learning_rate": 5e-4
   },
   "model": {

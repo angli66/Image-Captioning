@@ -1,5 +1,5 @@
 {
-  "experiment_name": "lstm_3",
+  "experiment_name": "lstm_9",
   "dataset": {
     "training_ids_file_path": "./train_ids.csv",
     "validation_ids_file_path": "./val_ids.csv",
@@ -13,12 +13,12 @@
     "num_workers": 4
   },
   "experiment": {
-    "num_epochs": 0,
-    "learning_rate": 5e-4
+    "num_epochs": 10,
+    "learning_rate": 1e-4
   },
   "model": {
-    "hidden_size": 512,
-    "embedding_size": 300,
+    "hidden_size": 1024,
+    "embedding_size": 250,
     "model_type": "model_1"
   },
   "generation": {
